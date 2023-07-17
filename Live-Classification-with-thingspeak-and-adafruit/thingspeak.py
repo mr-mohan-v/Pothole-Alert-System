@@ -2,7 +2,7 @@ import http.client as httplib
 import urllib
 import threading, os, time
 
-key = 'ILPWSPI4KO4XA0XT'  # Thingspeak Write API Key
+key =  # Thingspeak Write API Key
 
 # This Function will upload Latitude and Longitude values to the Thingspeak channel
 def upload_cloud(lat,lon):
