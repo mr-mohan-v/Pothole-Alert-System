@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>pothole</title>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <style>
+      /* Always set the map height explicitly to define the size of the div
+       * element that contains the map. */
+      #map {
+        height: 100%;
+      }
+      /* Optional: Makes the sample page fill the window. */
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAsTbhYpI10_jiaT0ogaIMz9EHulYWrxs0&callback=myMap"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <script>
+    
+    var a = [];
+    var b = [];
+    function getLocation() {
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(showPosition, showError, {  timeout: 5000, enableHighAccuracy: true });
+        }else {
+          alert("Geolocation is not supported by this browser");
+        }
+    }
+
+    function showPosition(position) {
+      //a.push(10.903768);
+      a.push(position.coords.latitude);
+      a = [...new Set(a)];
+      //b.push(76.898623);
+      b.push(position.coords.longitude);
+      b = [...new Set(b)];
+      console.log("My loc:",a, b);
+    }
+    function showError(error) {
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            x.innerHTML = "User denied the request for Geolocation."
+            break;
+          case error.POSITION_UNAVAILABLE:
+            x.innerHTML = "Location information is unavailable."
+            break;
+          case error.TIMEOUT:
+            x.innerHTML = "The request to get user location timed out."
+            break;
+          case error.UNKNOWN_ERROR:
+            x.innerHTML = "An unknown error occurred."
+            break;
+        }
+      }
+    var map;
+    var x=[];
+    var y=[];
+    function loadmaps(){
+      $.getJSON("https://api.thingspeak.com/channels/2178325/fields/1.json?results=2", function(result){
+      var m = result;
+      for (let i = 0; i < m["feeds"].length; i++) {
+        x.push(Number(m["feeds"][i]["field1"]));
+      }
+      x = [...new Set(x)]; 
+      //x = [10.903786]
+      console.log("lat:",x);
+      //alert(x);
+      });
+
+      $.getJSON("https://api.thingspeak.com/channels/2178325/fields/2.json?results=2", function(result){
+      var m = result;
+      for (let i = 0; i < m["feeds"].length; i++) {
+        y.push(Number(m["feeds"][i]["field2"]));
+      }
+      y = [...new Set(y)]; 
+      //y = [76.898649]
+      console.log("lng:",y);
+
+
+    getLocation();
+    }).done(function() { initialize(); });        
+    }
+    window.setInterval(function(){loadmaps();}, 10000);
+    function initialize() {
+       //alert(y);
+      var mapOptions = { zoom: 18, center: {lat: x[0], lng: y[0]}  };
+      map = new google.maps.Map(document.getElementById('map'), mapOptions);
+      const marker=[];
+      const image = "https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png"
+       for (let i = 0; i < x.length; i++) {
+        marker[i] = new google.maps.Marker({ position: { lat: x[i], lng: y[i] }, map: map , icon: image });
+      }      
+      marker[marker.length] = new google.maps.Marker({ position: { lat: a[0], lng: b[0] }, map: map  });
+      
+      function calculateDistance(lat1, lon1, lat2, lon2) {
+        const earthRadius = 6371e3; // Earth's radius in meters
+
+        const degToRad = (deg) => deg * (Math.PI / 180);
+        const deltaLat = degToRad(lat2 - lat1);
+        const deltaLon = degToRad(lon2 - lon1);
+
+        const a =
+          Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+          Math.cos(degToRad(lat1)) *
+          Math.cos(degToRad(lat2)) *
+          Math.sin(deltaLon / 2) *
+          Math.sin(deltaLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+        const distance = earthRadius * c;
+        return distance;
+      }
+
+      function areCoordinatesInRange(lat1, lon1, lat2, lon2, rangeInMeters) {
+        const distance = calculateDistance(lat1, lon1, lat2, lon2);
+        return distance <= rangeInMeters;
+      }
+    
+      const audio = new Audio("https://cdn.freesound.org/previews/216/216090_3450800-lq.mp3");//alerting the user
+      const rangeInMeters = 100;
+      for (let i = 0; i < x.length; i++) {
+        const withinRange = areCoordinatesInRange(x[i], y[i], a[0], b[0], rangeInMeters);
+        console.log(withinRange); // Output: true (the coordinates are within the 10-meter range)
+        if (withinRange) {
+          audio.play();
+        }
+      }
+      
+
+      //var infowindow = new google.maps.InfoWindow({ content: '<p>Marker Location:' + marker.getPosition() + '</p>' });
+
+      //google.maps.event.addListener(marker, 'click', function() { infowindow.open(map, marker); });
+      //google.maps.event.addListener(vehicle, 'click', function () { infowindow.open(map, marker); });
+    }
+    //google.maps.event.addEventListener(window, 'load', initialize);
+    </script>
+  </head>
+  <body>
+    <div id="map"></div>
+  </body>
+</html>
+
+
